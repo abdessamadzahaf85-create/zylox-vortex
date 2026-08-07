@@ -33,7 +33,6 @@
         
         .container { width: 100%; max-width: 480px; position: relative; }
 
-        /* --- Animations --- */
         @keyframes breathe {
             0%, 100% { box-shadow: var(--neon-glow-blue); }
             50% { box-shadow: 0 0 25px rgba(0, 243, 255, 0.7); }
@@ -52,7 +51,6 @@
         }
         .glitch-active { animation: glitch-anim 0.2s linear !important; }
 
-        /* --- Shared Glassmorphism --- */
         .glass-panel {
             background: var(--glass-bg);
             backdrop-filter: blur(12px);
@@ -61,7 +59,6 @@
             border-radius: 20px;
         }
 
-        /* --- Profile Section --- */
         .profile-section { text-align: center; margin-bottom: 35px; }
         .avatar-container {
             width: 110px; height: 110px; border-radius: 50%;
@@ -78,7 +75,6 @@
         }
         .bio { font-size: 13px; color: var(--text-muted); letter-spacing: 1px; }
 
-        /* --- Buttons & Links --- */
         .btn-group { margin-bottom: 15px; }
         .neon-btn {
             width: 100%; padding: 18px 25px; display: flex; align-items: center; justify-content: space-between;
@@ -97,7 +93,6 @@
             animation: breathe 3s infinite;
         }
 
-        /* --- Dropdowns --- */
         .list-dropdown { display: none; margin-top: 10px; padding: 10px; }
         .list-dropdown.active { display: block; animation: float 0.3s ease-out forwards; }
         .dropdown-item {
@@ -108,7 +103,6 @@
         }
         .dropdown-item:hover { background: rgba(0, 243, 255, 0.1); border-color: var(--neon-blue); }
 
-        /* --- Dictionary View --- */
         .view-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         .view-title { font-size: 18px; text-shadow: 0 0 8px var(--neon-green); color: var(--neon-green); }
         .btn-back { background: transparent; border: 1px solid var(--text-muted); color: var(--text-muted); padding: 8px 15px; border-radius: 50px; cursor: pointer; font-size: 12px; transition: 0.2s; }
@@ -124,7 +118,6 @@
         .dict-og-name { font-size: 11px; color: var(--text-muted); text-decoration: line-through; margin-bottom: 5px; }
         .dict-z-name { font-size: 16px; font-weight: 800; color: var(--neon-green); text-shadow: 0 0 5px var(--neon-green); }
 
-        /* --- Admin View --- */
         .admin-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
         .tab-btn { flex: 1; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid #333; color: white; border-radius: 10px; cursor: pointer; transition: 0.2s; }
         .tab-btn.active { background: var(--neon-purple); border-color: var(--neon-purple); box-shadow: var(--neon-glow-purple); }
@@ -136,7 +129,6 @@
             border-radius: 10px; color: white; outline: none; transition: 0.2s; 
         }
         
-        /* تنسيق زر رفع الصورة */
         .input-group input[type="file"] {
             width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid #333; 
             border-radius: 10px; color: var(--text-muted); outline: none; cursor: pointer;
@@ -198,8 +190,7 @@
                 <div class="view-title">[ TERMINAL_01 : DICTIONARY ]</div>
                 <button class="btn-back" onclick="switchView('main-view', this)">عودة <i class="fa-solid fa-reply"></i></button>
             </div>
-            <div class="dict-grid" id="dict-grid">
-                </div>
+            <div class="dict-grid" id="dict-grid"></div>
         </div>
 
         <div id="admin-view" class="glass-panel hidden" style="padding: 20px;">
@@ -262,16 +253,52 @@
         </div>
     </div>
 
-    <script>
-        let linksData = JSON.parse(localStorage.getItem('vortex_links')) || [];
-        let dictData = JSON.parse(localStorage.getItem('vortex_dict')) || [];
+    <!-- ربط مكتبات فايربيس (Firebase SDKs) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        function triggerGlitch(element) {
+        const firebaseConfig = {
+            apiKey: "AIzaSyCV3uXg2BN5qQHDy7q316vC_M0I9sKqSqc",
+            authDomain: "zyloxvortex.firebaseapp.com",
+            projectId: "zyloxvortex",
+            storageBucket: "zyloxvortex.firebasestorage.app",
+            messagingSenderId: "934311904474",
+            appId: "1:934311904474:web:e325276592200ddec8d1e3",
+            measurementId: "G-4JQ2S6Q2RQ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let linksData = [];
+        let dictData = [];
+
+        // جلب البيانات من فايربيس عند فتح الموقع
+        async function fetchRealtimeData() {
+            try {
+                // جلب الروابط
+                const linksSnapshot = await getDocs(collection(db, "links"));
+                linksData = linksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderMainLinks();
+                renderAdminLinks();
+
+                // جلب القاموس
+                const dictSnapshot = await getDocs(collection(db, "dictionary"));
+                dictData = dictSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderDictionary();
+                renderAdminDict();
+            } catch (e) {
+                console.error("Error fetching data: ", e);
+            }
+        }
+
+        window.triggerGlitch = function(element) {
             element.classList.add('glitch-active');
             setTimeout(() => element.classList.remove('glitch-active'), 200);
         }
 
-        function switchView(viewId, btn) {
+        window.switchView = function(viewId, btn) {
             if(btn) triggerGlitch(btn);
             document.getElementById('main-view').classList.add('hidden');
             document.getElementById('dict-view').classList.add('hidden');
@@ -284,7 +311,7 @@
             if(viewId === 'admin-view') { renderAdminLinks(); renderAdminDict(); }
         }
 
-        function toggleDropdown(type, btn) {
+        window.toggleDropdown = function(type, btn) {
             triggerGlitch(btn);
             const list = document.getElementById(`${type}-list`);
             const isClosing = list.classList.contains('active');
@@ -297,7 +324,7 @@
         let clickTimer;
         const SECRET_CODE = "زايلوكس|ZYLOX";
 
-        function handleSecretClick(element) {
+        window.handleSecretClick = function(element) {
             triggerGlitch(element);
             clickCount++;
             clearTimeout(clickTimer);
@@ -342,14 +369,14 @@
             document.getElementById('dict-grid').innerHTML = html || '<p style="grid-column: 1/-1; text-align:center; font-size:13px;">جاري تحديث قاعدة البيانات...</p>';
         }
 
-        function switchAdminTab(tab) {
+        window.switchAdminTab = function(tab) {
             document.getElementById('tab-links').classList.toggle('active', tab === 'links');
             document.getElementById('tab-dict').classList.toggle('active', tab === 'dict');
             document.getElementById('admin-links-sec').classList.toggle('hidden', tab !== 'links');
             document.getElementById('admin-dict-sec').classList.toggle('hidden', tab !== 'dict');
         }
 
-        function handleTypeChange() {
+        window.handleTypeChange = function() {
             const type = document.getElementById('link-type').value;
             const iconGroup = document.getElementById('icon-group');
             const nameInput = document.getElementById('link-name');
@@ -363,27 +390,36 @@
             }
         }
 
-        function saveLink() {
+        window.saveLink = async function() {
             const type = document.getElementById('link-type').value;
             const name = document.getElementById('link-name').value;
             const url = document.getElementById('link-url').value;
             const icon = type === 'social' ? document.getElementById('link-icon').value : '';
             
             if(name && url) {
-                linksData.push({ id: Date.now(), type, name, url, icon });
-                localStorage.setItem('vortex_links', JSON.stringify(linksData));
-                renderMainLinks(); renderAdminLinks();
-                document.getElementById('link-url').value = '';
+                try {
+                    const docRef = await addDoc(collection(db, "links"), { type, name, url, icon });
+                    linksData.push({ id: docRef.id, type, name, url, icon });
+                    renderMainLinks(); 
+                    renderAdminLinks();
+                    document.getElementById('link-url').value = '';
+                    alert("تم حفظ الرابط في السحابة بنجاح!");
+                } catch (e) {
+                    alert("حدث خطأ أثناء الحفظ");
+                }
             } else alert("أكمل البيانات");
         }
 
-        // دالة حذف الروابط مع رسالة التأكيد
-        function deleteLink(id) {
-            if(confirm("هل أنت متأكد من حذف هذا الرابط نهائياً؟")) {
-                linksData = linksData.filter(l => l.id !== id);
-                localStorage.setItem('vortex_links', JSON.stringify(linksData));
-                renderMainLinks(); 
-                renderAdminLinks();
+        window.deleteLink = async function(id) {
+            if(confirm("هل أنت متأكد من حذف هذا الرابط نهائياً للجميع؟")) {
+                try {
+                    await deleteDoc(doc(db, "links", id));
+                    linksData = linksData.filter(l => l.id !== id);
+                    renderMainLinks(); 
+                    renderAdminLinks();
+                } catch(e) {
+                    alert("فشل الحذف");
+                }
             }
         }
 
@@ -391,13 +427,12 @@
             document.getElementById('manage-links-list').innerHTML = linksData.map(l => `
                 <div class="manage-item">
                     <span>${l.name} (${l.type === 'social' ? 'تواصل' : 'موقع'})</span>
-                    <button class="delete-btn" onclick="deleteLink(${l.id})"><i class="fa-solid fa-trash"></i></button>
+                    <button class="delete-btn" onclick="deleteLink('${l.id}')"><i class="fa-solid fa-trash"></i></button>
                 </div>
             `).join('');
         }
 
-        // دالة معالجة الصورة وتحويلها
-        function processAndSaveDict() {
+        window.processAndSaveDict = function() {
             const ogName = document.getElementById('dict-og').value;
             const zName = document.getElementById('dict-z').value;
             const fileInput = document.getElementById('dict-img-file');
@@ -410,38 +445,39 @@
             if (fileInput.files && fileInput.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    const base64Image = e.target.result;
-                    saveToDict(base64Image, ogName, zName);
+                    saveToDict(e.target.result, ogName, zName);
                 };
                 reader.readAsDataURL(fileInput.files[0]);
             } else {
-                // إذا لم يختر المستخدم صورة، يتم وضع صورة افتراضية
                 saveToDict('https://i.imgur.com/8Q5g5Zb.png', ogName, zName);
             }
         }
 
-        // دالة الحفظ النهائية في القاموس
-        function saveToDict(imgData, ogName, zName) {
-            dictData.push({ id: Date.now(), img: imgData, ogName, zName });
+        async function saveToDict(imgData, ogName, zName) {
             try {
-                localStorage.setItem('vortex_dict', JSON.stringify(dictData));
+                const docRef = await addDoc(collection(db, "dictionary"), { img: imgData, ogName, zName });
+                dictData.push({ id: docRef.id, img: imgData, ogName, zName });
                 renderAdminDict();
+                renderDictionary();
                 document.getElementById('dict-img-file').value = '';
                 document.getElementById('dict-og').value = '';
                 document.getElementById('dict-z').value = '';
+                alert("تمت الإضافة للقاموس بنجاح للجميع!");
             } catch(e) {
-                // التقاط خطأ امتلاء الذاكرة إذا كانت الصورة كبيرة جداً
-                alert("مساحة التخزين لا تكفي! يرجى اختيار صورة بحجم أصغر (أقل من 2 ميغابايت).");
-                dictData.pop(); // التراجع عن الإضافة
+                alert("حجم الصورة كبير جداً على قاعدة البيانات، اختر صورة أصغر.");
             }
         }
 
-        // دالة حذف كلمات القاموس مع رسالة التأكيد
-        function deleteDictWord(id) {
-            if(confirm("هل أنت متأكد من حذف هذا العنصر من القاموس؟")) {
-                dictData = dictData.filter(d => d.id !== id);
-                localStorage.setItem('vortex_dict', JSON.stringify(dictData));
-                renderAdminDict();
+        window.deleteDictWord = async function(id) {
+            if(confirm("هل أنت متأكد من حذف هذا العنصر نهائياً للجميع؟")) {
+                try {
+                    await deleteDoc(doc(db, "dictionary", id));
+                    dictData = dictData.filter(d => d.id !== id);
+                    renderAdminDict();
+                    renderDictionary();
+                } catch(e) {
+                    alert("فشل الحذف");
+                }
             }
         }
 
@@ -449,12 +485,14 @@
             document.getElementById('manage-dict-list').innerHTML = dictData.map(d => `
                 <div class="manage-item">
                     <span>${d.zName}</span>
-                    <button class="delete-btn" onclick="deleteDictWord(${d.id})"><i class="fa-solid fa-trash"></i></button>
+                    <button class="delete-btn" onclick="deleteDictWord('${d.id}')"><i class="fa-solid fa-trash"></i></button>
                 </div>
             `).join('');
         }
 
-        renderMainLinks();
+        // تشغيل الجلب عند التحميل
+        fetchRealtimeData();
     </script>
 </body>
 </html>
+
